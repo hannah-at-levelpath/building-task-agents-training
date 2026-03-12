@@ -1,0 +1,448 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Building Task Agents</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Libre+Baskerville:wght@400;700&display=swap" rel="stylesheet">
+  <style>
+    :root{
+      --accent:#22c7c9;
+      --accent-soft:#e9fbfb;
+      --ink:#0f2747;
+      --bg:#0f2747;
+      --card:#ffffff;
+      --muted:#5f7391;
+      --border:#d9e4ee;
+      --navy-soft:#eef4f9;
+    }
+    *{box-sizing:border-box}
+    body{
+      margin:0;
+      font-family:"DM Sans",sans-serif;
+      background:var(--bg);
+      color:var(--ink);
+    }
+    .container{max-width:1280px;margin:0 auto;padding:24px 16px}
+    .top-card,.card,.sidebar,.nav-card,.completion-card,.hero{background:var(--card);border:1px solid var(--border);border-radius:28px}
+    .top-card{padding:20px 24px;margin-bottom:24px}
+    .eyebrow{font-size:12px;font-weight:700;letter-spacing:.2em;text-transform:uppercase;color:var(--accent)}
+    h1,h2,h3{font-family:"Libre Baskerville",serif;margin:0}
+    .page-title{font-size:32px;line-height:1.2;margin-top:8px}
+    .subtitle{max-width:760px;color:var(--muted);font-size:14px;line-height:1.8;margin-top:8px}
+    .layout{display:grid;grid-template-columns:340px 1fr;gap:24px}
+    .sidebar{padding:16px;align-self:start;position:sticky;top:24px}
+    .sidebar-head{background:var(--accent-soft);border-radius:20px;padding:16px;margin-bottom:16px}
+    .sidebar-title{font-size:28px;line-height:1.2;margin-top:8px}
+    .sidebar-sub{font-size:14px;line-height:1.7;color:var(--muted);margin-top:8px}
+    .step-btn{
+      width:100%;text-align:left;background:#fff;border:1px solid var(--border);border-radius:20px;
+      padding:16px;cursor:pointer;display:block;margin-bottom:8px;transition:.2s transform,.2s box-shadow,.2s border-color,.2s background;
+    }
+    .step-btn:hover{transform:translateY(-1px)}
+    .step-btn.active{border-color:var(--accent);background:#f2fcfc;box-shadow:0 8px 24px rgba(34,199,201,.14)}
+    .step-row{display:flex;gap:12px;align-items:flex-start}
+    .step-num{
+      width:32px;height:32px;border-radius:12px;background:#f1f4f8;display:flex;align-items:center;justify-content:center;
+      font-size:14px;font-weight:700;flex:0 0 32px
+    }
+    .step-num.complete{background:var(--accent);color:#fff}
+    .step-title{font-size:14px;font-weight:700;line-height:1.6;color:var(--ink);margin-top:4px}
+    .main{display:flex;flex-direction:column;gap:20px}
+    .progress-card{padding:16px 18px}
+    .progress-row{display:flex;justify-content:space-between;gap:16px;align-items:center}
+    .progress-meta{font-size:14px;color:var(--muted);margin-top:4px}
+    .progress-pct{font-size:32px;font-weight:700}
+    .progress-track{margin-top:12px;height:8px;border-radius:999px;background:#eef2f6;overflow:hidden}
+    .progress-fill{height:100%;background:var(--accent);width:0%;transition:width .35s ease}
+    .hero{padding:24px 28px;background:linear-gradient(135deg,#eef8fb 0%,#ffffff 68%)}
+    .hero h2{font-size:42px;line-height:1.15;margin-top:10px}
+    .hero p{font-size:16px;line-height:2;color:var(--muted);max-width:880px;margin-top:16px}
+    .objective{
+      display:inline-flex;border:1px solid var(--border);background:#fff;border-radius:999px;padding:10px 16px;
+      margin-top:20px;font-size:14px;font-weight:500
+    }
+    .walkthrough{margin-top:24px;border:1px solid var(--border);border-radius:28px;overflow:hidden;background:#fff}
+    .walkthrough-head{
+      display:flex;justify-content:space-between;align-items:center;padding:12px 16px;border-bottom:1px solid var(--border);background:var(--navy-soft)
+    }
+    .badge{border:1px solid var(--border);background:#fff;border-radius:999px;padding:6px 12px;font-size:12px;font-weight:500}
+    .walkthrough-body{padding:16px}
+    .walkthrough img{width:100%;border:1px solid var(--border);border-radius:20px;display:block}
+    .caption{margin-top:12px;background:var(--accent-soft);border-radius:16px;padding:12px 16px;font-size:14px;line-height:1.8}
+    .grid{display:grid;grid-template-columns:1.2fr .8fr;gap:20px}
+    .card{padding:24px 28px}
+    .card h3{font-size:24px}
+    .list{display:grid;gap:12px;margin-top:16px}
+    .list-item{
+      border:1px solid var(--border);border-radius:20px;background:#fcfdff;padding:16px;display:flex;gap:12px;align-items:flex-start
+    }
+    .dot{width:10px;height:10px;border-radius:999px;background:var(--accent);margin-top:8px;flex:0 0 10px}
+    .list-item .text{font-size:14px;line-height:1.9}
+    .ordered .num{
+      width:24px;height:24px;border-radius:999px;background:var(--accent-soft);display:flex;align-items:center;justify-content:center;
+      font-size:12px;font-weight:700;flex:0 0 24px
+    }
+    .callout{background:var(--accent-soft);border-radius:18px;padding:18px;font-size:14px;line-height:1.9;margin-top:16px}
+    .checklist{display:grid;gap:12px;margin-top:16px}
+    .check-btn{
+      width:100%;text-align:left;border:1px solid var(--border);background:#fff;border-radius:20px;padding:16px;
+      display:flex;gap:16px;cursor:pointer;transition:.2s transform,.2s border-color,.2s background
+    }
+    .check-btn:hover{transform:translateY(-1px)}
+    .check-btn.checked{border-color:#b8eff0;background:#f2fcfc}
+    .check-pill{
+      width:32px;height:32px;border-radius:12px;background:#f1f4f8;display:flex;align-items:center;justify-content:center;
+      font-size:14px;font-weight:700;flex:0 0 32px
+    }
+    .check-btn.checked .check-pill{background:var(--accent);color:#fff}
+    .check-title{font-weight:700}
+    .check-detail{font-size:14px;line-height:1.7;color:var(--muted);margin-top:4px}
+    .examples{display:grid;gap:12px;margin-top:16px}
+    .example{border:1px solid var(--border);border-radius:18px;padding:16px;font-size:14px;line-height:1.8}
+    .nav-card,.completion-card{padding:20px 24px}
+    .nav-wrap{display:flex;justify-content:space-between;align-items:center;gap:16px}
+    .nav-copy-title{font-size:14px;font-weight:700}
+    .nav-copy-sub{font-size:14px;color:var(--muted);margin-top:4px}
+    .btns{display:flex;gap:12px;flex-wrap:wrap}
+    button.action{
+      border:none;border-radius:18px;padding:14px 18px;font-family:inherit;font-size:14px;font-weight:600;cursor:pointer
+    }
+    .btn-outline{border:1px solid var(--border)!important;background:#fff;color:var(--ink)}
+    .btn-soft{border:1px solid #b8eff0!important;background:#f2fcfc;color:var(--ink)}
+    .btn-accent{background:var(--accent);color:#fff}
+    .action[disabled]{opacity:.5;cursor:not-allowed}
+    .completion-row{display:flex;justify-content:space-between;align-items:center;gap:16px}
+    .completion-title{font-size:24px;font-weight:700;margin-top:8px}
+    .completion-text{font-size:14px;line-height:1.8;color:var(--muted);margin-top:8px}
+    @media (max-width: 980px){
+      .layout,.grid{grid-template-columns:1fr}
+      .sidebar{position:static}
+      .hero h2{font-size:34px}
+      .nav-wrap,.completion-row{flex-direction:column;align-items:flex-start}
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="top-card">
+      <div class="eyebrow">Levelpath training module</div>
+      <h1 class="page-title">Building Task Agents</h1>
+      <div class="subtitle">A guided course-player experience with visible progress, clear steps, and a polished product walkthrough layout.</div>
+    </div>
+
+    <div class="layout">
+      <aside class="sidebar">
+        <div class="sidebar-head">
+          <div class="eyebrow">Course player</div>
+          <h1 class="sidebar-title">Building Task Agents</h1>
+          <div class="sidebar-sub">Step-by-step training for building task agents in Levelpath.</div>
+        </div>
+        <div id="sidebar-steps"></div>
+      </aside>
+
+      <main class="main">
+        <div class="progress-card card">
+          <div class="progress-row">
+            <div>
+              <div class="eyebrow">Progress</div>
+              <div class="progress-meta"><span id="progress-count">0 of 5</span> steps completed</div>
+            </div>
+            <div class="progress-pct" id="progress-pct">0%</div>
+          </div>
+          <div class="progress-track"><div class="progress-fill" id="progress-fill"></div></div>
+        </div>
+
+        <div id="module-body"></div>
+
+        <div class="nav-card">
+          <div class="nav-wrap">
+            <div>
+              <div class="nav-copy-title">Navigation</div>
+              <div class="nav-copy-sub">Move through the course or mark a step complete.</div>
+            </div>
+            <div class="btns">
+              <button class="action btn-outline" id="back-btn">Back</button>
+              <button class="action btn-soft" id="complete-btn">Mark complete</button>
+              <button class="action btn-accent" id="next-btn">Next step</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="completion-card">
+          <div class="completion-row">
+            <div>
+              <div class="eyebrow">Completion</div>
+              <div class="completion-title" id="completion-title">Keep going</div>
+              <div class="completion-text" id="completion-text">You have completed 0 of 5 steps.</div>
+            </div>
+          </div>
+        </div>
+      </main>
+    </div>
+  </div>
+
+  <script>
+    const MODULES = [
+      {
+        id: 1,
+        title: 'What is a Task Agent?',
+        eyebrow: 'Step 1',
+        objective: 'Understand the purpose of a task agent and why it helps customer-facing teams move faster.',
+        summary: 'A task agent is a custom-built agent that helps make your day-to-day work more efficient in Levelpath. Think of it like a reusable assistant designed to help with specific workflows, prompts, or actions inside the product.',
+        image: `data:image/webp;base64,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`,
+        imageCaption: 'Example of a task agent inside Levelpath. Users can launch prompts like NDA Review, Risk Review, or Contract Summary directly from the AI Assistant panel.',
+        bullets: [
+          'Custom-made for repeatable work inside Levelpath',
+          'Designed to save time and reduce manual effort',
+          'Helpful for customer-facing roles who need consistency and speed',
+          'Works best when it is clearly scoped to a task or workflow'
+        ],
+        calloutTitle: 'Simple definition',
+        callout: 'Task agents help users complete recurring work faster by packaging the right prompt, instructions, and reference material into one guided action.'
+      },
+      {
+        id: 2,
+        title: 'Where can Task Agents be used?',
+        eyebrow: 'Step 2',
+        objective: 'Learn the key places in Levelpath where task agents can support work.',
+        summary: 'Task agents can be attached to the workflows and modules where your team already works, making them easier to discover and use in context.',
+        bullets: ['Projects', 'Sourcing', 'Invoices', 'Contracts', 'Supplier Record', 'Front Door'],
+        calloutTitle: 'Why this matters',
+        callout: 'The best task agents live where the work is happening. That makes adoption easier and results more relevant.'
+      },
+      {
+        id: 3,
+        title: 'Where do agents live?',
+        eyebrow: 'Step 3',
+        objective: 'Know where to find and manage task agents inside the platform.',
+        summary: 'Task agents live in the Agent Library. This is the central place where users can find, review, and manage available agents.',
+        image: `data:image/webp;base64,UklGRuJqAABXRUJQVlA4INZqAABw8gGdASp4BaoBPm02mEikIyKhI6QAgA2JaW7hdCOHdXnVaIo0XrD4kPj95u7f9zvQIn9i+7N+R7b7/c7ju3q9M2Xf3W98vaUeJ6dpkVxs6tGgI8mXQ3v5k7m5cHcBv6QMS5uJ4bA3pU6lH1UyD6dF0a+0kMzyD0f+lfz1+3tWmW6Fqk0j9FSS0y9dA/1m5K4m5pGZ7uSWf97L3cJ6gXq2K6zYt4c2SXtO4+K8K5q6l5kOQy8c3r0h5m5i9b0l2E5p8w0ZbW5/1D9j+zP7D+8fzL+eP8f+N/wv5G/Zv2D+M/3n+Pfqv9+/sP+e/2P8n+bv0n9o/uf8L+ZP4f+cP2z+u/8X+0/0r9k/5P+i/6z+u/8r+u/8P+e/2P8T+Xf2T+g/7z+Wf0D+T/3n+Yf6n+Pfpv8t/rP+3/rf9A/4f+rv3H+S/6P+eP5D+if6D+Jf7j+Nf5j+o/0f+5f4D+Xf2T+g/7T+Qf2D+if4n+Jf6z+af5z+v/2T+Qf1f+V/5T+Qf4z+Gf7D+Yf6D+Rf6T+Sf5D+N/1T+Zv2j+f/3j+Rf1z+Qf5f+Rv5T+Qf7P+Qf5T+Yf5T+Qf5j+Qf6P+Qf5T+Qf7j+Qf5T+Qf7P+Qf5T+Qf7j+Qf5T+Qf7P+Qf5T+Qf7j+Qf5T+Qf7P+Qf5T+Qf7j+Qf5T+Qf7P+Qf5T+Qf7j+Qf5T+Qf7P+Qf5T+Qf7j+Qf5T+Qf7P+Qf5T+Qf7j+Qf5T+Qf7P+Qf5T+Qf7j+Qf5T+Qf7P+Qf5T+Qf7j+Qf5T+Qf7P+Qf5T+Qf7j+Qf5T+Qf7P+Qf5T+Qf7j+Qf5T+Qf7P+Qf5T+Qf7j+Qf5T+Qf7P+Qf5T+Qf7j+Qf5T+Qf7P+Qf5T+Qf7j+Qf5T+Qf7P+Qf5T+Qf7j+Qf5T+Qf7P+Qf5T+Qf7j+Qf5T+Qf7P+Qf5T+Qf7j+Qf5T+Qf7P+Qf5T+Qf7j+Qf5T+Qf7P+Qf5T+Qf7j+Qf5T+Qf7P+Qf5T+Qf7j+Qf5T+Qf7P+Qf5T+Qf7j+Qf5T+Qf7P+Qf5T+Qf7j+Qf5T+Qf7P+Qf5T+Qf7j+Qf5T+Qf7P+Qf5T+Qf7j+Qf5T+Qf7P+Qf5T+Qf7j+Qf5T+Qf7P+Qf5T+Qf7j+Qf5T+Qf7P+Qf5T+Qf7j+Qf5T+Qf7P+Qf5T+Qf7j+Qf5T+Qf7P+Qf5T+Qf7j+Qf5T+Qf7P+Qf5T+Qf7j+Qf5T+Qf7P+Qf5T+Qf7j+Qf5T+Qf7P+Qf5T+Qf7j+Qf5T+Qf7P+Qf5T+Qf7j+Qf5T+Qf7P+Qf5T+AAA=`,
+        imageCaption: 'The Agent Library is the home for task agents. From here, users can review existing agents or click New Task Agent to create one.',
+        bullets: [
+          'The Agent Library is the home for task agents',
+          'It helps teams organize and discover what is already available',
+          'It gives users a single place to manage agent setup and reuse'
+        ],
+        calloutTitle: 'Tip',
+        callout: 'Before creating a new task agent, it is worth checking the Agent Library to see whether something similar already exists.'
+      },
+      {
+        id: 4,
+        title: 'How to create a Task Agent',
+        eyebrow: 'Step 4',
+        objective: 'Follow the setup flow to create a task agent that is useful, clear, and easy to test.',
+        summary: 'Creating a task agent is mostly about being specific. Title it clearly, write instructions the way you would prompt an LLM, attach useful reference material, and place it in the right modules using assignments.',
+        image: `data:image/webp;base64,UklGRj6qAABXRUJQVlA4IDKqAACQogKdASp4BfUCPm02mEkkIyKhI6IhI6QAgA2JaW7hdwC7J3dZaU0+3M9mIuQhH0c1b2a3xv6v2b+Xv2L/6v+Xv2j+qf3j+av1z+of2j+Rf7H+Yf6z+Nf7n+cv6r+gv2j+Yf4L+Wf7n+ef6L+cv4P+Uf7r+Vf4T+Sf7n+cv6L+gv2j+Yf4L+Wf7n+ef6L+cv4P+Uf7r+Vf4T+Sf7n+cv6L+gv2j+Yf4L+Wf7n+ef6L+cv4P+Uf7r+Vf4T+Sf7n+cv6L+gv2j+Yf4L+Wf7n+ef6L+cv4P+Uf7r+Vf4T+Sf7n+cv6L+gv2j+Yf4L+Wf7n+ef6L+cv4P+Uf7r+Vf4T+Sf7n+cv6L+gv2j+Yf4L+Wf7n+ef6L+cv4P+Uf7r+Vf4T+Sf7n+cv6L+gv2j+Yf4L+Wf7n+ef6L+cv4P+Uf7r+Vf4T+Sf7n+cv6L+gv2j+Yf4L+Wf7n+ef6L+cv4P+Uf7r+Vf4T+Sf7n+cv6L+gv2j+Yf4L+Wf7n+ef6L+cv4P+Uf7r+Vf4T+Sf7n+cv6L+gv2j+Yf4L+Wf7n+ef6L+cv4P+Uf7r+Vf4T+Sf7n+cv6L+gv2j+Yf4L+Wf7n+ef6L+cv4P+Uf7r+Vf4T+Sf7n+cv6L+gv2j+Yf4L+Wf7n+ef6L+cv4P+Uf7r+Vf4T+Sf7n+cv6L+gv2j+Yf4L+Wf7n+ef6L+cv4P+Uf7r+Vf4T+Sf7n+cv6L+gv2j+Yf4L+Wf7n+ef6L+cv4P+Uf7r+Vf4T+Sf7n+cv6L+gv2j+Yf4L+Wf7n+ef6L+cv4P+Uf7r+Vf4T+Sf7n+cv6L+gv2j+Yf4L+Wf7n+ef6L+cv4P+Uf7r+Vf4T+Sf7n+cv6L+gv2j+Yf4L+Wf7n+ef6L+cv4P+Uf7r+Vf4T+Sf7n+cv6L+gv2j+Yf4L+Wf7n+ef6L+cv4P+Uf7r+Vf4T+Sf7n+cv6L+gv2j+Yf4L+Wf7n+ef6L+cv4P+Uf7r+Vf4T+Sf7n+cv6L+gv2j+Yf4L+Wf7n+ef6L+cv4P+Uf7r+Vf4T+Sf7n+cv6L+gv2j+Yf4L+Wf7n+ef6L+cv4P+Uf7r+Vf4T+Sf7n+cv6L+gv2j+Yf4L+Wf7n+ef6L+cv4P+Uf7r+Vf4T+Sf7n+cv6L+gv2j+AAA=`,
+        imageCaption: 'The task agent setup flow includes the title, prompt, attachments, and assignments so the agent is configured for the right workflow from the start.',
+        bullets: [
+          'Start with a clear use case',
+          'Use plain-language instructions',
+          'Attach supporting material only when it improves the output',
+          'Assign it to the right place so users can find it'
+        ],
+        calloutTitle: 'Best practice',
+        callout: 'A strong task agent is specific, contextual, and easy for someone else to understand just by reading the title and prompt.',
+        checklist: [
+          { title: 'Click “Create a new task agent”', detail: 'Start a new agent from the Agent Library or the relevant creation flow.' },
+          { title: 'Add a clear title', detail: 'The title is what users will see in the module, so name it based on the task it helps complete.' },
+          { title: 'Write the prompt', detail: 'Instruct it like you would instruct an LLM. Be explicit about what it should do, what context it should use, and what a good output looks like.' },
+          { title: 'Add reference attachments', detail: 'Include any documents or materials the agent should reference so its output is grounded in the right information.' },
+          { title: 'Choose assignments', detail: 'Use assignments to decide which modules the task agent should live under so users can access it in the right workflow.' }
+        ],
+        examples: [
+          'Good title: Summarize supplier record for customer review',
+          'Good prompt direction: Review the request details, identify missing information, and return a concise summary with next-step recommendations.',
+          'Good attachment use: Add a policy doc, template, or playbook when the agent should follow a specific format or standard.'
+        ]
+      },
+      {
+        id: 5,
+        title: 'Test the Task Agent',
+        eyebrow: 'Step 5',
+        objective: 'Validate that the task agent works where it is assigned and behaves the way you expect.',
+        summary: 'After setup, go into the module where you assigned the task agent and test the button to make sure it works the way you want it to. The best way to test is in an active event with real context for the agent to run against.',
+        bullets: [
+          'Open the module where the task agent was assigned',
+          'Trigger the task agent from the button or action area',
+          'Test in an active event whenever possible',
+          'For example, create a new request and start filling in data so the agent has something to work from',
+          'Refine the title, prompt, attachments, or assignments if the output is not right'
+        ],
+        calloutTitle: 'Testing advice',
+        callout: 'The more realistic the test scenario, the easier it is to tell whether your task agent is truly useful in live workflows.'
+      }
+    ];
+
+    let activeIndex = 0;
+    let completed = new Array(MODULES.length).fill(false);
+    const checklistIndex = MODULES.findIndex(m => m.checklist);
+    let checklists = {};
+    if (checklistIndex !== -1) {
+      checklists[checklistIndex] = new Array(MODULES[checklistIndex].checklist.length).fill(false);
+    }
+
+    function escapeHtml(str){
+      return String(str)
+        .replaceAll('&','&amp;')
+        .replaceAll('<','&lt;')
+        .replaceAll('>','&gt;')
+        .replaceAll('"','&quot;')
+        .replaceAll("'","&#39;");
+    }
+
+    function renderSidebar(){
+      const el = document.getElementById('sidebar-steps');
+      el.innerHTML = MODULES.map((m, i) => `
+        <button class="step-btn ${i===activeIndex ? 'active' : ''}" data-index="${i}">
+          <div class="step-row">
+            <div class="step-num ${completed[i] ? 'complete' : ''}">${completed[i] ? '✓' : m.id}</div>
+            <div>
+              <div class="eyebrow">${escapeHtml(m.eyebrow)}</div>
+              <div class="step-title">${escapeHtml(m.title)}</div>
+            </div>
+          </div>
+        </button>
+      `).join('');
+      el.querySelectorAll('.step-btn').forEach(btn=>{
+        btn.addEventListener('click', ()=>{ activeIndex = Number(btn.dataset.index); render(); });
+      });
+    }
+
+    function renderModuleBody(){
+      const m = MODULES[activeIndex];
+      const checklistState = checklists[activeIndex] || [];
+      const leftTitle = m.id === 5 ? 'Step by Step' : 'Key takeaways';
+
+      const bulletsHtml = m.id === 5
+        ? `<ol class="list ordered">${
+            m.bullets.map((b,i)=>`
+              <li class="list-item">
+                <div class="num">${i+1}</div>
+                <div class="text">${escapeHtml(b)}</div>
+              </li>`).join('')
+          }</ol>`
+        : `<div class="list">${
+            m.bullets.map(b=>`
+              <div class="list-item">
+                <div class="dot"></div>
+                <div class="text">${escapeHtml(b)}</div>
+              </div>`).join('')
+          }</div>`;
+
+      const checklistHtml = m.checklist ? `
+        <section class="card">
+          <h3>Creation workflow</h3>
+          <div class="checklist">
+            ${m.checklist.map((item, idx)=>`
+              <button class="check-btn ${checklistState[idx] ? 'checked' : ''}" data-check="${idx}">
+                <div class="check-pill">${checklistState[idx] ? '✓' : (idx+1)}</div>
+                <div>
+                  <div class="check-title">${escapeHtml(item.title)}</div>
+                  <div class="check-detail">${escapeHtml(item.detail)}</div>
+                </div>
+              </button>
+            `).join('')}
+          </div>
+        </section>
+      ` : '';
+
+      const examplesHtml = m.examples ? `
+        <section class="card">
+          <h3>Helpful examples</h3>
+          <div class="examples">
+            ${m.examples.map(ex=>`<div class="example">${escapeHtml(ex)}</div>`).join('')}
+          </div>
+        </section>
+      ` : '';
+
+      const imageHtml = m.image ? `
+        <div class="walkthrough">
+          <div class="walkthrough-head">
+            <div class="eyebrow">Product walkthrough</div>
+            <div class="badge">In-product example</div>
+          </div>
+          <div class="walkthrough-body">
+            <img src="${m.image}" alt="${escapeHtml(m.title)} screenshot">
+            ${m.imageCaption ? `<div class="caption">${escapeHtml(m.imageCaption)}</div>` : ''}
+          </div>
+        </div>
+      ` : '';
+
+      document.getElementById('module-body').innerHTML = `
+        <section class="hero">
+          <div class="eyebrow">${escapeHtml(m.eyebrow)}</div>
+          <h2>${escapeHtml(m.title)}</h2>
+          <p>${escapeHtml(m.summary)}</p>
+          ${imageHtml}
+          <div class="objective">Objective: ${escapeHtml(m.objective)}</div>
+        </section>
+
+        <div class="grid">
+          <section class="card">
+            <h3>${leftTitle}</h3>
+            ${bulletsHtml}
+          </section>
+          <section class="card">
+            <h3>${escapeHtml(m.calloutTitle)}</h3>
+            <div class="callout">${escapeHtml(m.callout)}</div>
+          </section>
+        </div>
+
+        ${checklistHtml}
+        ${examplesHtml}
+      `;
+
+      document.querySelectorAll('[data-check]').forEach(btn=>{
+        btn.addEventListener('click', ()=>{
+          const idx = Number(btn.dataset.check);
+          checklists[activeIndex][idx] = !checklists[activeIndex][idx];
+          renderModuleBody();
+        });
+      });
+    }
+
+    function renderProgress(){
+      const done = completed.filter(Boolean).length;
+      const total = MODULES.length;
+      const pct = Math.round((done/total)*100);
+      document.getElementById('progress-count').textContent = `${done} of ${total}`;
+      document.getElementById('progress-pct').textContent = `${pct}%`;
+      document.getElementById('progress-fill').style.width = `${pct}%`;
+
+      const complete = done === total;
+      document.getElementById('completion-title').textContent = complete ? 'Training complete' : 'Keep going';
+      document.getElementById('completion-text').textContent = complete
+        ? 'You have completed every step in this training. You can revisit any section anytime.'
+        : `You have completed ${done} of ${total} steps.`;
+
+      document.getElementById('back-btn').disabled = activeIndex === 0;
+      document.getElementById('next-btn').textContent = activeIndex === MODULES.length - 1 ? 'Stay on final step' : 'Next step';
+    }
+
+    function render(){
+      renderSidebar();
+      renderModuleBody();
+      renderProgress();
+    }
+
+    document.getElementById('back-btn').addEventListener('click', ()=>{
+      activeIndex = Math.max(activeIndex - 1, 0);
+      render();
+    });
+    document.getElementById('complete-btn').addEventListener('click', ()=>{
+      completed[activeIndex] = true;
+      render();
+    });
+    document.getElementById('next-btn').addEventListener('click', ()=>{
+      completed[activeIndex] = true;
+      activeIndex = Math.min(activeIndex + 1, MODULES.length - 1);
+      render();
+    });
+
+    render();
+  </script>
+</body>
+</html>
